@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COINSWAT Wallet</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+    <div class="topbar">
+        <a href="#"><img src="../assets/png/coinswat_logo.png" alt="COINSWAT Wallet Logo"></a>
+        <div class="buttons" style="display: flex; flex-direction: column; align-items: center;">
+            <button id="connect-button" title="Mit Wallet verbinden" onclick="connectWallet()">Connect</button>
+        </div>
+    </div>
+    
+    <div class="divider"></div>
+    <div class="content" id="content-area">
+    </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            checkLoginStatus();
+        });
+
+        function checkLoginStatus() {
+            let connectButton = document.getElementById("connect-button");
+            fetch('../backend/session.php')
+                .then(response => response.json())
+                .then(data => {
+                    let content = document.getElementById("content-area");
+                    let content1 = `<h3>Willkommen!</h3><p>Deine Wallets werden hier angezeigt.</p>`;
+                    let content2 = `
+                        <div style='text-align: center;'>
+                            <img src="../assets/png/coinswat_logo.png" alt="COINSWAT Logo" style="width: 150px; margin-bottom: 10px;">
+                            <h3>Du bist über dein Wallet ${data.wallet || 'N/A'} angemeldet</h3>
+                            <p>Du kannst optional eine E-Mail und ein Passwort hinzufügen, um dich später auch mit diesen Daten anzumelden.</p>
+                            <div style="text-align: left; max-width: 300px; margin: auto;">
+                                <label for="email">E-Mail:</label>
+                                <input type="email" id="email" placeholder="Deine E-Mail" style="width: 100%; padding: 8px; margin: 5px 0;">
+                                <label for="password">Passwort:</label>
+                                <div style="display: flex; align-items: center;">
+                                    <input type="password" id="password" placeholder="Passwort" style="width: 100%; padding: 8px;">
+                                    <button onclick="togglePasswordVisibility()" style="margin-left: 5px; padding: 8px;">👁️</button>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <button onclick="dismissRegistration()" class="dismiss-btn">Dismiss</button>
+                                <button onclick="addEmailLogin()" class="add-email-btn">Add Email Login</button>
+                            </div>
+                        </div>`;
+                    let content3 = `<h3>Anmelden</h3>
+                                    <label>E-Mail:</label>
+                                    <input type="email" id="email" placeholder="Deine E-Mail">
+                                    <label>Passwort:</label>
+                                    <input type="password" id="password" placeholder="Passwort">
+                                    <button onclick="login()">Anmelden</button>
+                                    <p><a href="#" onclick="loadContent('forgot_password')">Passwort vergessen?</a></p>
+                                    <p>Noch kein Konto? <a href="#" onclick="loadContent('register')">Registrieren</a></p>`;
+                    if (data.loggedIn) {
+                        let displayText = data.email ? data.email.substring(0, 5) + '***' + data.email.slice(-5) : data.wallet ? data.wallet.substring(0, 5) + '***' + data.wallet.slice(-5) : 'User';
+                        connectButton.setAttribute("data-status", "logged-in");
+                        connectButton.innerText = displayText;
+                        connectButton.onclick = logout;
+                        content.innerHTML = content1;
+                        if (data.wallet) {
+                            content.innerHTML = content2;
+                        }
+                    } else {
+                        connectButton.setAttribute("data-status", "logged-out");
+                        connectButton.innerText = "Connect";
+                        connectButton.onclick = connectWallet;
+                        content.innerHTML = content3;
+                    }
+                })
+                .catch(error => console.error("Fehler beim Überprüfen des Login-Status:", error));
+        }
+
+        function connectWallet() {
+            if (window.ethereum) {
+                window.ethereum.request({ method: 'eth_requestAccounts' })
+                    .then(accounts => {
+                        fetch('../backend/session.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `wallet_address=${accounts[0]}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                sessionStorage.setItem('wallet_address', accounts[0]);
+                                checkLoginStatus();
+                            } else {
+                                alert("Fehler bei der Wallet-Verbindung");
+                            }
+                        })
+                        .catch(error => console.error("Fehler bei der Wallet-Verbindung:", error));
+                    })
+                    .catch(error => {
+                        console.error("WalletConnect Fehler:", error);
+                    });
+            } else {
+                alert("MetaMask oder ein kompatibles Wallet wird benötigt.");
+            }
+        }
+
+        function logout() {
+            fetch('../backend/session.php?logout=true')
+                .then(() => {
+                    sessionStorage.clear();
+                    localStorage.clear();
+                    checkLoginStatus();
+                })
+                .catch(error => console.error("Fehler beim Logout:", error));
+        }
+    </script>
+</body>
+</html>
