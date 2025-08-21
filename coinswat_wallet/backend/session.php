@@ -2,7 +2,7 @@
 session_start();
 require_once '../backend/config.php';
 
-// Prüfen, ob der Benutzer eingeloggt ist und welche Anmeldeart genutzt wurde
+// PrÃ¼fen, ob der Benutzer eingeloggt ist und welche Anmeldeart genutzt wurde
 function checkLogin() {
     if (!isset($_SESSION['user_id']) && !isset($_SESSION['wallet_address'])) {
         die(json_encode(["loggedIn" => false]));
@@ -39,7 +39,7 @@ function checkLogin() {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wallet_address'])) {
     $wallet_address = $_POST['wallet_address'];
     
-    // Prüfen, ob Wallet bereits existiert
+    // PrÃ¼fen, ob Wallet bereits existiert
     $stmt = $pdo->prepare("SELECT id FROM users WHERE wallet_address = ?");
     $stmt->execute([$wallet_address]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -59,12 +59,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wallet_address'])) {
     exit();
 }
 
-// Registrierung mit E-Mail & Passwort vervollständigen
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-    
-    if (!isset($_SESSION['user_id'])) {
+function formatWallet($wallet) {
+    return substr($wallet, 0, 5) . '***' . substr($wallet, -5);
+}
+
+// checkLogin() nur aufrufen, wenn dieses Skript direkt aufgerufen wird
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+    checkLogin();
+}
+?>
         die(json_encode(["status" => "error", "message" => "Keine Wallet verbunden."]));
     }
     
